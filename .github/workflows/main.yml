@@ -18,7 +18,6 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
-          ping: 100.64.0.1
           version: latest
 
       - name: Enable macOS Screen Sharing (VNC)
