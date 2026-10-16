@@ -53,8 +53,8 @@ jobs:
 
       - name: Setup TailVNC (Browser-based VNC)
         run: |
-          echo "Installing websockify via Homebrew..."
-          brew install websockify
+          echo "Installing websockify via pipx..."
+          pipx install websockify
           
           echo "Cloning noVNC..."
           git clone https://github.com/novnc/noVNC.git /tmp/novnc
