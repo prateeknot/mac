@@ -1,4 +1,4 @@
-name: macOS VNC via Tailscale (Latest & Fixed)
+name: macOS VNC via Tailscale (DNS Fixed)
 
 on:
   workflow_dispatch:
@@ -19,6 +19,7 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
           version: latest
+          accept-dns: false    # <--- YEH SABSE IMPORTANT FIX HAI
 
       - name: Enable macOS Screen Sharing (VNC)
         run: |
@@ -53,8 +54,12 @@ jobs:
 
       - name: Setup TailVNC (Browser-based VNC)
         run: |
-          echo "Installing websockify via pipx..."
-          pipx install websockify
+          echo "Setting up Python venv..."
+          python3 -m venv /tmp/venv
+          source /tmp/venv/bin/activate
+          
+          echo "Installing websockify..."
+          pip install websockify
           
           echo "Cloning noVNC..."
           git clone https://github.com/novnc/noVNC.git /tmp/novnc
@@ -62,7 +67,7 @@ jobs:
           git checkout v1.5.0
           
           echo "Starting websockify on port 6080..."
-          nohup websockify --web /tmp/novnc 6080 localhost:5900 > /tmp/websockify.log 2>&1 &
+          nohup /tmp/venv/bin/websockify --web /tmp/novnc 6080 localhost:5900 > /tmp/websockify.log 2>&1 &
           
           echo "TailVNC is ready!"
           echo "Open in browser: http://<TAILSCALE_IP>:6080/vnc.html"
