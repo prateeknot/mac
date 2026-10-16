@@ -1,4 +1,4 @@
-name: macOS VNC via Tailscale (Latest)
+name: macOS VNC via Tailscale (Latest & Fixed)
 
 on:
   workflow_dispatch:
@@ -53,9 +53,10 @@ jobs:
 
       - name: Setup TailVNC (Browser-based VNC)
         run: |
-          echo "Setting up noVNC + websockify..."
-          pip3 install websockify
+          echo "Installing websockify via Homebrew..."
+          brew install websockify
           
+          echo "Cloning noVNC..."
           git clone https://github.com/novnc/noVNC.git /tmp/novnc
           cd /tmp/novnc
           git checkout v1.5.0
