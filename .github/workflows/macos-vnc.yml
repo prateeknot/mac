@@ -1,0 +1,75 @@
+name: macOS VNC via Tailscale & TailVNC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  macos-vnc:
+    runs-on: macos-13
+    timeout-minutes: 360 # 6 hours
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Connect Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: latest
+
+      - name: Enable macOS Screen Sharing (VNC)
+        run: |
+          echo "Enabling VNC server..."
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -access -on \
+            -restart -agent -privs -all \
+            -allowAccessFor -allUsers
+
+          echo "Setting VNC password..."
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -configure -clientopts -setvnclegacy -vnclegacy yes \
+            -setvncpw -vncpw "${{ secrets.VNC_PASSWORD }}"
+
+          echo "Starting Screen Sharing service..."
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
+
+      - name: Create VNC User (optional)
+        run: |
+          echo "Creating vncuser account..."
+          sudo sysadminctl -addUser vncuser -password "${{ secrets.VNC_PASSWORD }}" -admin 2>/dev/null || true
+
+      - name: Get Tailscale IP
+        run: |
+          echo "================================"
+          echo "TAILSCALE IP:"
+          tailscale ip -4
+          echo "================================"
+          echo "VNC Address: vnc://<TAILSCALE_IP>:5900"
+          echo "Browser VNC: http://<TAILSCALE_IP>:6080/vnc.html"
+          echo "================================"
+
+      - name: Setup TailVNC (Browser-based VNC)
+        run: |
+          echo "Setting up TailVNC (noVNC + websockify)..."
+          # Install websockify (Python-based proxy)
+          pip3 install websockify
+          
+          # Clone noVNC (browser VNC client)
+          git clone https://github.com/novnc/noVNC.git /tmp/novnc
+          cd /tmp/novnc
+          git checkout v1.5.0
+          
+          # Start websockify to serve noVNC and proxy to VNC server
+          echo "Starting websockify on port 6080..."
+          nohup websockify --web /tmp/novnc 6080 localhost:5900 > /tmp/websockify.log 2>&1 &
+          
+          echo "TailVNC is ready!"
+          echo "Open in browser: http://<TAILSCALE_IP>:6080/vnc.html"
+
+      - name: Keep Alive
+        run: |
+          echo "Workflow running. Max 6 hours."
+          sleep 21600
